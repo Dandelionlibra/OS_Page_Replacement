@@ -3,6 +3,7 @@
 #include <vector>
 #include <queue>
 #include <unordered_map>
+#include <set>
 #include <algorithm>
 using namespace std;
 
@@ -14,9 +15,10 @@ const int MFU_FIFO = 4;
 const int LFU_LRU = 5;
 const int ALL = 6;
 
-struct page_replacement{
-    int method;
-    int page_number;
+struct page_record {
+    // int method;
+    int page;
+    bool in_page_frame = false;
     int count = 0;
     int timestamp = 0;
 
@@ -28,9 +30,18 @@ struct output_data{
     bool page_faults = false; // default
 };
 
-struct Node {
-    int data;
-    Node* next;
+struct Compare {
+    // LRU_Algorithm
+    bool operator()(const pair<int, int>& a, const pair<int, int>& b) {
+        return a.second > b.second;
+    }
+    // LFU_and_FIFO_Algorithm set<pair<int, pair<int, int>>> //! <page, <count, timestamp>>
+    bool operator()(const pair<int, pair<int, int>>& a, const pair<int, pair<int, int>>& b) const {
+        // according to count and timestamp to sort
+        if (a.second.first != b.second.first)
+            return a.second.first < b.second.first;
+        return a.second.second > b.second.second;
+    }
 };
 
 bool readInputFile(string &fileName, int &method, int &pageFrames, vector<int> &pageReferences, bool &readflied) {
@@ -79,7 +90,6 @@ bool readInputFile(string &fileName, int &method, int &pageFrames, vector<int> &
 
 void FIFO_Algorithm(int page_Frames, const vector<int>& page_References, ofstream& outputFile) {
     outputFile << "--------------FIFO-----------------------\n";
-    
     queue<int> pageQueue;
     unordered_map<int, bool> Page_Records; // page -> isExist
     int page_Faults = 0, page_Replaces = 0;
@@ -122,52 +132,105 @@ void FIFO_Algorithm(int page_Frames, const vector<int>& page_References, ofstrea
     outputFile << "Page Fault = " << page_Faults << "  Page Replaces = " << page_Replaces << "  Page Frames = " << page_Frames << "\n";
 }
 
-int find_oldest(unordered_map<int, int>& pagePosition, const int &currnt_time) {
-    int time_distance = -1;
+template <typename Key, typename Value>
+int find_oldest(unordered_map<Key, Value>& Page_Records, const int &currnt_time, const int &method) {
     int oldest_Page = 0;
-    for (auto it = pagePosition.begin(); it != pagePosition.end(); it++) {
-        int time = currnt_time - it->second;
-        if (time > time_distance) {
-            time_distance = time;
-            oldest_Page = it->first;
-        }
+    int time_distance = -1;
+    int max_count = 0;
+    cout << "\033[1;33mOldest Page: " << oldest_Page << "\033[0m" << endl;
+
+    switch (method) {
+        case FIFO:
+            // unordered_map<int, int>
+            for (auto it = Page_Records.begin(); it != Page_Records.end(); it++) {
+                int time = currnt_time - it->second;
+                if (time > time_distance) {
+                    time_distance = time;
+                    oldest_Page = it->first;
+                }
+            }
+            break;
+        case LFU_FIFO:
+            // unordered_map<int, page_record> //! page -> (page, in_page_frame, count, timestamp)
+            for (auto it = Page_Records.begin(); it != Page_Records.end(); it++) {
+                if (it->second.in_page_frame == false)
+                    continue;
+
+                int time = currnt_time - it->second.timestamp;
+                int count = it->second.count;
+                if (count > max_count) {
+                    max_count = count;
+                    time_distance = time;
+                    oldest_Page = it->first;
+                }
+                else if (count == max_count && time > time_distance) {
+                    time_distance = time;
+                    oldest_Page = it->first;
+                }
+            }
+            break;
+        /*case MFU_FIFO:
+            for (auto it = Page_Records.begin(); it != Page_Records.end(); it++) {
+                int time = currnt_time - it->second;
+                if (time > time_distance) {
+                    time_distance = time;
+                    oldest_Page = it->first;
+                }
+            }
+            break;
+        case LFU_LRU:
+            for (auto it = Page_Records.begin(); it != Page_Records.end(); it++) {
+                int time = currnt_time - it->second;
+                if (time > time_distance) {
+                    time_distance = time;
+                    oldest_Page = it->first;
+                }
+            }
+            break;*/
+        default:
+            break;
     }
-    // cout << "\033[1;33mOldest Page: " << oldest_Page << "\033[0m" << endl;
+
+    cout << "\033[1;33mOldest Page: " << oldest_Page << "\033[0m" << endl;
     return oldest_Page;
 }
+
+
+
+
 // Least Recently Used Page Replacement Algorithm(LRU)
 void LRU_Algorithm(int pageFrames, const vector<int>& pageReferences, ofstream& outputFile) {
     outputFile << "--------------LRU-----------------------\n";
-    unordered_map<int, int> pagePosition; // page -> (position, timestamp)
+    unordered_map<int, int> Page_Records; // page -> (position, timestamp)
     int pageFaults = 0, pageReplaces = 0;
 
     int currnet_time = 0;
     for (int page : pageReferences) {
         output_data output_line;
         output_line.current_page = to_string(page);
-        const auto it = pagePosition.find(page);
-        if (it == pagePosition.end()) { // Page not found
+        const auto it = Page_Records.find(page);
+        if (it == Page_Records.end()) { // Page not found
             pageFaults++;
             output_line.page_faults = true; // page fault
-            if (pagePosition.size() >= pageFrames) { // Page frame is full
-                int oldest_Page = find_oldest(pagePosition, currnet_time); // Find the least recently used page
-                pagePosition.erase(oldest_Page);
+            if (Page_Records.size() >= pageFrames) { // Page frame is full
+                int oldest_Page = find_oldest(Page_Records, currnet_time, FIFO); // Find the least recently used page
+                Page_Records.erase(oldest_Page);
                 pageReplaces++;
             }
             // added new page, set it's timestamp
-            pagePosition[page] = currnet_time;
+            Page_Records[page] = currnet_time;
         }
         else // Page found, update it's timestamp
-            pagePosition[page] = currnet_time;
+            Page_Records[page] = currnet_time;
         
         // Output current page frame state
-        vector<pair<int,int>> output_sortedPages;
-        for (const auto& item : pagePosition) {
-            // cout << "current_time: " << currnet_time << "  Page: " << item.first << "  Time: " << item.second << endl;
-            // auto pos = lower_bound(output_sortedPages.begin(), output_sortedPages.end(), make_pair(item.first, item.second),([](const pair<int,int>& a, const pair<int,int>& b) { return a.second > b.second; }));
-            output_sortedPages.push_back(make_pair(item.first, item.second));
-        }
-        sort(output_sortedPages.begin(), output_sortedPages.end(), [](const pair<int,int>& a, const pair<int,int>& b) { return a.second > b.second; });
+        set<pair<int, int>, Compare> output_sortedPages;
+        for (const auto& item : Page_Records)
+            output_sortedPages.insert(item.first, item.second);
+
+        // for (const auto& item : pagePosition)
+        //     output_sortedPages.push_back(make_pair(item.first, item.second));
+        // sort(output_sortedPages.begin(), output_sortedPages.end(), [](const pair<int,int>& a, const pair<int,int>& b) { return a.second > b.second; });
 
 
         // cout << "Sorted Pages: ";
@@ -188,10 +251,99 @@ void LRU_Algorithm(int pageFrames, const vector<int>& pageReferences, ofstream& 
 // Least Frequently Used (LFU) + First In First Out (FIFO)
 void LFU_and_FIFO_Algorithm(int pageFrames, const vector<int>& pageReferences, ofstream& outputFile) {
     outputFile << "--------------Least Frequently Used Page Replacement-----------------------\n";
-    unordered_map<int, int> pagePosition; // page -> (position, timestamp)
+    unordered_map<int, page_record> pageRecords; // page -> (page, in_page_frame_flag, count, timestamp)
+    set<pair<int, pair<int, int>>, Compare> pageFrames_data; // <page, <count, timestamp>>
     int pageFaults = 0, pageReplaces = 0;
-
     int currnet_time = 0;
+
+    for (int page : pageReferences) {
+        output_data output_line;
+        output_line.current_page = to_string(page);
+        const auto it = pageRecords.find(page);
+
+        // Page not found in history data, add to pageFrames_data and pageRecords
+        if (it == pageRecords.end()){
+            cout << "\033[1;31mif (it == pageRecords.end())\033[0m" << endl;
+            pageFaults++;
+            output_line.page_faults = true; // page fault
+            if (pageFrames_data.size() >= pageFrames) { // Page frame is full
+                // int oldest_Page = find_oldest(pageRecords, currnet_time, LFU_FIFO); // Find the least recently used page
+                
+                /*int oldest_Page = pageFrames_data.begin()->first;
+                for (auto it = pageFrames_data.begin(); it != pageFrames_data.end(); it++) {
+                    if (it->first == oldest_Page) {
+                        pageFrames_data.erase(it);
+                        break;
+                    }
+                }*/
+                pageRecords[pageFrames_data.begin()->first].in_page_frame = false;
+                pageFrames_data.erase(pageFrames_data.begin());
+                pageReplaces++;
+            }
+            // Page frame is not full, add new page
+            page_record tmp;
+            tmp.page = page;
+            tmp.in_page_frame = true;
+            tmp.count = 1;
+            tmp.timestamp = currnet_time;
+
+            pageRecords[page] = tmp;
+            pageFrames_data.insert(make_pair(page, make_pair(1, currnet_time)));
+            for (const auto& item : pageFrames_data)
+                cout << item.first << " ";
+            
+            cout << endl;
+            
+        }
+        // Page found in history data but not in page frame
+        else if (it->second.in_page_frame == false) {
+            cout << "\033[1;31melse if (it->second.in_page_frame == false)\033[0m" << endl;
+            pageFaults++;
+            output_line.page_faults = true; // page fault
+            if (pageFrames_data.size() >= pageFrames) { // Page frame is full
+                pageRecords[pageFrames_data.begin()->first].in_page_frame = false;
+                pageFrames_data.erase(pageFrames_data.begin());
+                pageReplaces++;
+            }
+            else {
+                cout << "\033[1;31mHHHHHHHHHHHEEEEEEEEEEEEELLLLLLLOOOOOOOOOOOOOO!!!!!!!!\033[0m" << endl;
+            }
+            // set to page frame
+            pageRecords[page].in_page_frame = true;
+            pageRecords[page].count++;
+            pageRecords[page].timestamp = currnet_time;
+            pageFrames_data.insert(make_pair(page, make_pair(pageRecords[page].count, currnet_time)));
+        }
+        else { // Page found, update it's timestamp
+            cout << "\033[1;31melse\033[0m" << endl;
+            pageRecords[page].count++;
+            pageRecords[page].timestamp = currnet_time;
+            for (auto it = pageFrames_data.begin(); it != pageFrames_data.end(); it++) {
+                if (it->first == page) {
+                    pageFrames_data.erase(it);
+                    break;
+                }
+            }
+            pageFrames_data.insert(make_pair(page, make_pair(pageRecords[page].count, currnet_time)));
+            
+            for (const auto& item : pageFrames_data) {
+                cout << item.first << " ";
+            }
+            cout << endl;
+
+        }
+        
+
+        cout << "Sorted Pages: ";
+        for (const auto& item : pageFrames_data) {
+            cout << item.first << " ";
+            output_line.pageFame_data += to_string(item.first);
+        }
+        cout << endl;
+
+        outputFile << output_line.current_page << "\t" << output_line.pageFame_data << (output_line.page_faults ? "\tF" : "") << "\n";
+        currnet_time++;
+    }
 
     outputFile << "Page Fault = " << pageFaults << "  Page Replaces = " << pageReplaces << "  Page Frames = " << pageFrames << "\n";
 }
