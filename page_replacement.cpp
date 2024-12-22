@@ -18,7 +18,7 @@ struct page_replacement{
     int method;
     int page_number;
     int count = 0;
-    int process_time = 0;
+    int timestamp = 0;
 
 };
 
@@ -28,7 +28,10 @@ struct output_data{
     bool page_faults = false; // default
 };
 
-
+struct Node {
+    int data;
+    Node* next;
+};
 
 bool readInputFile(string &fileName, int &method, int &pageFrames, vector<int> &pageReferences, bool &readflied) {
     if (fileName == "exit" || fileName == "Exit" || fileName == "q") {
@@ -78,7 +81,7 @@ void FIFO_Algorithm(int page_Frames, const vector<int>& page_References, ofstrea
     outputFile << "--------------FIFO-----------------------\n";
     
     queue<int> pageQueue;
-    unordered_map<int, bool> Page_Records;
+    unordered_map<int, bool> Page_Records; // page -> isExist
     int page_Faults = 0, page_Replaces = 0;
 
     int ref = 0;
@@ -115,39 +118,67 @@ void FIFO_Algorithm(int page_Frames, const vector<int>& page_References, ofstrea
             outputFile << "\tF" << "\n";
         else
             outputFile << "\n";
-
-        
     }
-
     outputFile << "Page Fault = " << page_Faults << "  Page Replaces = " << page_Replaces << "  Page Frames = " << page_Frames << "\n";
 }
 
+int find_oldest(unordered_map<int, int>& pagePosition, const int &currnt_time) {
+    int time_distance = -1;
+    int oldest_Page = 0;
+    for (auto it = pagePosition.begin(); it != pagePosition.end(); it++) {
+        int time = currnt_time - it->second;
+        if (time > time_distance) {
+            time_distance = time;
+            oldest_Page = it->first;
+        }
+    }
+    // cout << "\033[1;33mOldest Page: " << oldest_Page << "\033[0m" << endl;
+    return oldest_Page;
+}
+// Least Recently Used Page Replacement Algorithm(LRU)
 void LRU_Algorithm(int pageFrames, const vector<int>& pageReferences, ofstream& outputFile) {
     outputFile << "--------------LRU-----------------------\n";
-    vector<int> pageStack;
-    unordered_map<int, int> pagePosition;
+    unordered_map<int, int> pagePosition; // page -> (position, timestamp)
     int pageFaults = 0, pageReplaces = 0;
 
-    for (int i = 0 ; i < pageReferences.size(); i++) {
-        int page = pageReferences[i];
-        auto it = find(pageStack.begin(), pageStack.end(), page);
-        if (it == pageStack.end()) {
+    int currnet_time = 0;
+    for (int page : pageReferences) {
+        output_data output_line;
+        output_line.current_page = to_string(page);
+        const auto it = pagePosition.find(page);
+        if (it == pagePosition.end()) { // Page not found
             pageFaults++;
-            if (pageStack.size() >= pageFrames) {
-                int lruPage = pageStack.front();
-                pageStack.erase(pageStack.begin());
+            output_line.page_faults = true; // page fault
+            if (pagePosition.size() >= pageFrames) { // Page frame is full
+                int oldest_Page = find_oldest(pagePosition, currnet_time); // Find the least recently used page
+                pagePosition.erase(oldest_Page);
                 pageReplaces++;
             }
-        } else {
-            pageStack.erase(it);
+            // added new page, set it's timestamp
+            pagePosition[page] = currnet_time;
         }
-        pageStack.push_back(page);
-
+        else // Page found, update it's timestamp
+            pagePosition[page] = currnet_time;
+        
         // Output current page frame state
-        for (const int& item : pageStack) {
-            outputFile << item << "\t";
+        vector<pair<int,int>> output_sortedPages;
+        for (const auto& item : pagePosition) {
+            // cout << "current_time: " << currnet_time << "  Page: " << item.first << "  Time: " << item.second << endl;
+            // auto pos = lower_bound(output_sortedPages.begin(), output_sortedPages.end(), make_pair(item.first, item.second),([](const pair<int,int>& a, const pair<int,int>& b) { return a.second > b.second; }));
+            output_sortedPages.push_back(make_pair(item.first, item.second));
         }
-        outputFile << (it == pageStack.end() ? "F" : "") << "\n";
+        sort(output_sortedPages.begin(), output_sortedPages.end(), [](const pair<int,int>& a, const pair<int,int>& b) { return a.second > b.second; });
+
+
+        // cout << "Sorted Pages: ";
+        for (const auto& item : output_sortedPages) {
+            // cout << item.first << " ";
+            output_line.pageFame_data += to_string(item.first);
+        }
+        // cout << endl;
+
+        outputFile << output_line.current_page << "\t" << output_line.pageFame_data << (output_line.page_faults ? "\tF" : "") << "\n";
+        currnet_time++;
     }
 
     outputFile << "Page Fault = " << pageFaults << "  Page Replaces = " << pageReplaces << "  Page Frames = " << pageFrames << "\n";
@@ -156,16 +187,34 @@ void LRU_Algorithm(int pageFrames, const vector<int>& pageReferences, ofstream& 
 
 // Least Frequently Used (LFU) + First In First Out (FIFO)
 void LFU_and_FIFO_Algorithm(int pageFrames, const vector<int>& pageReferences, ofstream& outputFile) {
-    outputFile << "--------------LFU + FIFO not implemented yet-----------------------\n";
+    outputFile << "--------------Least Frequently Used Page Replacement-----------------------\n";
+    unordered_map<int, int> pagePosition; // page -> (position, timestamp)
+    int pageFaults = 0, pageReplaces = 0;
+
+    int currnet_time = 0;
+
+    outputFile << "Page Fault = " << pageFaults << "  Page Replaces = " << pageReplaces << "  Page Frames = " << pageFrames << "\n";
 }
 
 // Most Frequently Used (MFU) + First In First Out (FIFO)
 void MFU_and_FIFO_Algorithm(int pageFrames, const vector<int>& pageReferences, ofstream& outputFile) {
-    outputFile << "--------------MFU + FIFO not implemented yet-----------------------\n";
+    outputFile << "--------------Most Frequently Used Page Replacement -----------------------\n";
+    unordered_map<int, int> pagePosition; // page -> (position, timestamp)
+    int pageFaults = 0, pageReplaces = 0;
+
+    int currnet_time = 0;
+
+    outputFile << "Page Fault = " << pageFaults << "  Page Replaces = " << pageReplaces << "  Page Frames = " << pageFrames << "\n";
 }
 
 void LFU_and_LRU_Algorithm(int pageFrames, const vector<int>& pageReferences, ofstream& outputFile) {
-    outputFile << "--------------LFU + LRU not implemented yet-----------------------\n";
+    outputFile << "--------------Least Frequently Used LRU Page Replacement-----------------------\n";
+    unordered_map<int, int> pagePosition; // page -> (position, timestamp)
+    int pageFaults = 0, pageReplaces = 0;
+
+    int currnet_time = 0;
+
+    outputFile << "Page Fault = " << pageFaults << "  Page Replaces = " << pageReplaces << "  Page Frames = " << pageFrames << "\n";
 }
 
 int main() {
