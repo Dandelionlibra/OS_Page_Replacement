@@ -434,7 +434,7 @@ void LFU_and_LRU_Algorithm(int pageFrames, const vector<int>& pageReferences, of
         }
         else{
             // page found, update it's count and timestamp
-            cout << "page:" << page << " count:" << pageRecords[page].count << " timestamp:" << pageRecords[page].timestamp << "\n";
+            // cout << "page:" << page << " count:" << pageRecords[page].count << " timestamp:" << pageRecords[page].timestamp << "\n";
             pageFrames_data.erase(make_pair(page, make_pair(pageRecords[page].count, pageRecords[page].timestamp)));
             pageRecords[page].count++;
             pageRecords[page].timestamp = currnet_time;
