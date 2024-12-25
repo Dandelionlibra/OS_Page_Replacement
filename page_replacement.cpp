@@ -195,7 +195,33 @@ void LRU_Algorithm(int pageFrames, const vector<int>& pageReferences, ofstream& 
     outputFile << "Page Fault = " << pageFaults << "  Page Replaces = " << pageReplaces << "  Page Frames = " << pageFrames << "\n";
 }
 
-int find_least_ot_most_frequent(unordered_map<int, page_record> pageFrames_data, int method) {
+int find_least_frequent(unordered_map<int, page_record> pageFrames_data) {
+    int count = 9999999;
+    int timestamp = -1;
+    int least_frequent = 0;
+    
+    // cout << "\033[1;33mLeast Frequent Page: " << least_frequent << "\033[0m" << endl;
+    for (const auto& item : pageFrames_data) {
+        if (item.second.in_page_frame == false)
+            continue;
+        if (item.second.count < count) {
+            count = item.second.count;
+            timestamp = item.second.timestamp;
+            least_frequent = item.first;
+        }
+        // if count is same, then check timestamp, find the oldest one
+        else if (item.second.count == count && item.second.timestamp < timestamp) {
+            timestamp = item.second.timestamp;
+            least_frequent = item.first;
+        }
+    }
+    // cout << "\033[1;33mLeast Frequent Page: " << least_frequent << "\033[0m" << endl;
+    return least_frequent;
+}
+
+
+
+/*int find_least_ot_most_frequent(unordered_map<int, page_record> pageFrames_data, int method) {
     int count_min = 9999999;
     int count_max = -1;
 
@@ -220,7 +246,9 @@ int find_least_ot_most_frequent(unordered_map<int, page_record> pageFrames_data,
     }
     // cout << "\033[1;33mLeast Frequent Page: " << least_frequent << "\033[0m" << endl;
     return least_frequent;
-}
+}*/
+
+
 // Least Frequently Used (LFU) + First In First Out (FIFO)
 void LFU_and_FIFO_Algorithm(int pageFrames, const vector<int>& pageReferences, ofstream& outputFile) {
     outputFile << "--------------Least Frequently Used Page Replacement-----------------------\n";
@@ -239,7 +267,7 @@ void LFU_and_FIFO_Algorithm(int pageFrames, const vector<int>& pageReferences, o
             output_line.page_faults = true; // page fault
             if (pageFrames_data.size() >= pageFrames){
                 // page frame is full
-                int oldest_Page = find_least_ot_most_frequent(pageRecords, LFU_FIFO);
+                int oldest_Page = find_least_frequent(pageRecords);
                 for(auto tmp = pageFrames_data.begin(); tmp != pageFrames_data.end(); tmp++){
                     if (tmp->first == oldest_Page){
                         // cout << "\033[1;35mOldest Page: " << oldest_Page << "  count: " << tmp->second.first << "  timestamp: " << tmp->second.second << "\033[0m" << endl;
@@ -248,6 +276,7 @@ void LFU_and_FIFO_Algorithm(int pageFrames, const vector<int>& pageReferences, o
                     }
                 }
                 pageRecords[oldest_Page].in_page_frame = false;
+                pageRecords[oldest_Page].count = 0; // reset count
                 pageReplaces++;
             }
             
@@ -282,6 +311,30 @@ void LFU_and_FIFO_Algorithm(int pageFrames, const vector<int>& pageReferences, o
     outputFile << "Page Fault = " << pageFaults << "  Page Replaces = " << pageReplaces << "  Page Frames = " << pageFrames << "\n";
 }
 
+
+int find_most_frequent(unordered_map<int, page_record> pageFrames_data) {
+    int count_max = -1;
+    int timestamp = -1;
+    int most_frequent = 0;
+    
+    cout << "\033[1;33mmost Frequent Page: " << most_frequent << "\033[0m" << endl;
+    for (const auto& item : pageFrames_data) {
+        if (item.second.in_page_frame == false)
+            continue;
+        if (item.second.count > count_max) {
+            count_max = item.second.count;
+            timestamp = item.second.timestamp;
+            most_frequent = item.first;
+        }
+        // if count is same, then check timestamp, find the oldest one
+        else if (item.second.count == count_max && item.second.timestamp < timestamp) {
+            timestamp = item.second.timestamp;
+            most_frequent = item.first;
+        }
+    }
+    cout << "\033[1;33mmost Frequent Page: " << most_frequent << "\033[0m" << endl;
+    return most_frequent;
+}
 // Most Frequently Used (MFU) + First In First Out (FIFO)
 void MFU_and_FIFO_Algorithm(int pageFrames, const vector<int>& pageReferences, ofstream& outputFile) {
     outputFile << "--------------Most Frequently Used Page Replacement -----------------------\n";
@@ -300,7 +353,7 @@ void MFU_and_FIFO_Algorithm(int pageFrames, const vector<int>& pageReferences, o
             output_line.page_faults = true; // page fault
             if (pageFrames_data.size() >= pageFrames){
                 // page frame is full
-                int oldest_Page = find_least_ot_most_frequent(pageRecords, MFU_FIFO);
+                int oldest_Page = find_most_frequent(pageRecords);
                 for(auto tmp = pageFrames_data.begin(); tmp != pageFrames_data.end(); tmp++){
                     if (tmp->first == oldest_Page){
                         cout << "\033[1;35mOldest Page: " << oldest_Page << "  count: " << tmp->second.first << "  timestamp: " << tmp->second.second << "\033[0m" << endl;
@@ -309,6 +362,7 @@ void MFU_and_FIFO_Algorithm(int pageFrames, const vector<int>& pageReferences, o
                     }
                 }
                 pageRecords[oldest_Page].in_page_frame = false;
+                pageRecords[oldest_Page].count = 0; // reset count
                 pageReplaces++;
             }
             

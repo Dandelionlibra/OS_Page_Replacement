@@ -49,14 +49,14 @@ Page Fault = 10  Page Replaces = 7  Page Frames = 3
 3	321	F
 4	432	F
 1	143	F
-2	243	F
-5	543	F
-1	154	F
-2	254	F
-3	354	F
-4	354
-5	354
-Page Fault = 10  Page Replaces = 7  Page Frames = 3
+2	214	F
+5	521	F
+1	521
+2	521
+3	352	F
+4	435	F
+5	435
+Page Fault = 9  Page Replaces = 6  Page Frames = 3
 
 --------------Least Frequently Used LRU Page Replacement-----------------------
 Page Fault = 0  Page Replaces = 0  Page Frames = 3
