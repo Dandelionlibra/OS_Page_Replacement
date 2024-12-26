@@ -16,8 +16,6 @@ const int LFU_LRU = 5;
 const int ALL = 6;
 
 struct page_record {
-    // int method;
-    // int page;
     bool in_page_frame = false;
     int count = 0;
     int timestamp = 0;
@@ -37,9 +35,6 @@ struct Compare {
     }
     // LFU_and_FIFO_Algorithm set<pair<int, pair<int, int>>> //! <page, <count, timestamp>>
     bool operator()(const pair<int, pair<int, int>>& a, const pair<int, pair<int, int>>& b) const {
-        // according to count and timestamp to sort
-        // if (a.second.first != b.second.first)
-        //     return a.second.first < b.second.first;
         return a.second.second > b.second.second;
     }
 };
@@ -91,7 +86,7 @@ bool readInputFile(string &fileName, int &method, int &pageFrames, vector<int> &
 void FIFO_Algorithm(int page_Frames, const vector<int>& page_References, ofstream& outputFile) {
     outputFile << "--------------FIFO-----------------------\n";
     
-    queue<int> pageQueue;
+    queue<int> pageQueue; // page frame
     unordered_map<int, bool> Page_Records; // page -> isExist
     int page_Faults = 0, page_Replaces = 0;
 
@@ -200,7 +195,6 @@ int find_least_frequent(unordered_map<int, page_record> pageFrames_data) {
     int timestamp = 99999999;
     int least_frequent = 0;
     
-    // cout << "\033[1;33mLeast Frequent Page: " << least_frequent << "\033[0m" << endl;
     for (const auto& item : pageFrames_data) {
         if (item.second.in_page_frame == false)
             continue;
@@ -215,7 +209,6 @@ int find_least_frequent(unordered_map<int, page_record> pageFrames_data) {
             least_frequent = item.first;
         }
     }
-    // cout << "\033[1;33mLeast Frequent Page: " << least_frequent << "\033[0m" << endl;
     return least_frequent;
 }
 
@@ -260,7 +253,7 @@ void LFU_and_FIFO_Algorithm(int pageFrames, const vector<int>& pageReferences, o
             // cout << "page:" << page << " count:" << pageRecords[page].count << " timestamp:" << pageRecords[page].timestamp << "\n";
             // pageFrames_data.erase(make_pair(page, make_pair(pageRecords[page].count, pageRecords[page].timestamp)));
             pageRecords[page].count++;
-            pageRecords[page].timestamp = currnet_time;
+            // pageRecords[page].timestamp = currnet_time;
             // pageFrames_data.insert(make_pair(page, make_pair(pageRecords[page].count, pageRecords[page].timestamp)));
         }
 
@@ -290,6 +283,8 @@ int find_most_frequent(unordered_map<int, page_record> pageFrames_data) {
     for (const auto& item : pageFrames_data) {
         if (item.second.in_page_frame == false)
             continue;
+        // cout << "\033[1;33mpage:" << item.first << " count:" << item.second.count << " timestamp:" << item.second.timestamp << "\033[0m\n";
+
         if (item.second.count > count_max) {
             count_max = item.second.count;
             timestamp = item.second.timestamp;
@@ -345,27 +340,23 @@ void MFU_and_FIFO_Algorithm(int pageFrames, const vector<int>& pageReferences, o
             // cout << "page:" << page << " count:" << pageRecords[page].count << " timestamp:" << pageRecords[page].timestamp << "\n";
             // pageFrames_data.erase(make_pair(page, make_pair(pageRecords[page].count, pageRecords[page].timestamp)));
             pageRecords[page].count++;
-            pageRecords[page].timestamp = currnet_time;
+            // pageRecords[page].timestamp = currnet_time; // don't need to update timestamp
             // pageFrames_data.insert(make_pair(page, make_pair(pageRecords[page].count, pageRecords[page].timestamp)));
         }
 
         // cout << "Current Page: " << page << "  Current Time:" << currnet_time << " \n";
-        int i = 1;
-
+        // int i = 1;
         for(auto it : pageFrames_data){
             // cout << i <<  ":" << it.first << " count:" << it.second.first << " timestamp:" << it.second.second << "\n";
             output_line.pageFame_data += to_string(it.first);
         }
-
         // cout << endl;
     
-
         outputFile << output_line.current_page << "\t" << output_line.pageFame_data << (output_line.page_faults ? "\tF" : "") << "\n";
         currnet_time++;
     }
     outputFile << "Page Fault = " << pageFaults << "  Page Replaces = " << pageReplaces << "  Page Frames = " << pageFrames << "\n";
 }
-
 
 int find_least_frequent_and_recently(unordered_map<int, page_record> pageFrames_data, int currnt_time) {
     int count = 9999999;
@@ -448,7 +439,6 @@ void LFU_and_LRU_Algorithm(int pageFrames, const vector<int>& pageReferences, of
             // cout << i <<  ":" << it.first << " count:" << it.second.first << " timestamp:" << it.second.second << "\n";
             output_line.pageFame_data += to_string(it.first);
         }
-
         // cout << endl;
 
         outputFile << output_line.current_page << "\t" << output_line.pageFame_data << (output_line.page_faults ? "\tF" : "") << "\n";

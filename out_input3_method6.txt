@@ -1,0 +1,22 @@
+--------------Most Frequently Used Page Replacement -----------------------
+1	1	F
+2	21	F
+3	321	F
+4	4321	F
+2	4321
+1	4321
+5	5431	F
+6	6543	F
+2	2654	F
+1	1265	F
+2	1265
+3	3165	F
+7	7316	F
+6	7316
+3	7316
+2	2731	F
+1	2731
+2	2731
+3	2731
+6	6271	F
+Page Fault = 12  Page Replaces = 8  Page Frames = 4
