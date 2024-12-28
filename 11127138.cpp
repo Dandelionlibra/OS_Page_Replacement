@@ -19,7 +19,6 @@ struct page_record {
     bool in_page_frame = false;
     int count = 0;
     int timestamp = 0;
-
 };
 
 struct output_data{
